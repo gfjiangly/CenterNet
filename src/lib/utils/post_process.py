@@ -86,16 +86,23 @@ def ctdet_post_process(dets, c, s, h, w, num_classes):
   ret = []
   for i in range(dets.shape[0]):
     top_preds = {}
-    dets[i, :, :2] = transform_preds(
-          dets[i, :, 0:2], c[i], s[i], (w, h))
-    dets[i, :, 2:4] = transform_preds(
-          dets[i, :, 2:4], c[i], s[i], (w, h))
+    coor_len = dets.shape[-1]-2
+    for j in range(0, coor_len, 2):
+      dets[i, :, j:j+2] = transform_preds(
+            dets[i, :, j:j+2], c[i], s[i], (w, h))
+    # dets[i, :, :2] = transform_preds(
+    #       dets[i, :, 0:2], c[i], s[i], (w, h))
+    # dets[i, :, 2:4] = transform_preds(
+    #       dets[i, :, 2:4], c[i], s[i], (w, h))
     classes = dets[i, :, -1]
     for j in range(num_classes):
       inds = (classes == j)
       top_preds[j + 1] = np.concatenate([
-        dets[i, inds, :4].astype(np.float32),
-        dets[i, inds, 4:5].astype(np.float32)], axis=1).tolist()
+        dets[i, inds, :coor_len].astype(np.float32),
+        dets[i, inds, coor_len:coor_len+1].astype(np.float32)], axis=1).tolist()
+      # top_preds[j + 1] = np.concatenate([
+      #   dets[i, inds, :4].astype(np.float32),
+      #   dets[i, inds, 4:5].astype(np.float32)], axis=1).tolist()
     ret.append(top_preds)
   return ret
 

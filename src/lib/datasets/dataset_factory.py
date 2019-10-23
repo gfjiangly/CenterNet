@@ -11,9 +11,11 @@ from .dataset.coco import COCO
 from .dataset.pascal import PascalVOC
 from .dataset.kitti import KITTI
 from .dataset.coco_hp import COCOHP
+from .dataset.dota import DOTA
 
 
 dataset_factory = {
+  'dota': DOTA,
   'coco': COCO,
   'pascal': PascalVOC,
   'kitti': KITTI,

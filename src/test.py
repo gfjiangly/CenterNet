@@ -5,12 +5,15 @@ from __future__ import print_function
 import _init_paths
 
 import os
+import os.path as osp
 import json
 import cv2
 import numpy as np
 import time
 from progress.bar import Bar
 import torch
+import pycocotools._mask as _mask
+import cvtools
 
 from external.nms import soft_nms
 from opts import opts
@@ -19,6 +22,7 @@ from utils.utils import AverageMeter
 from datasets.dataset_factory import dataset_factory
 from detectors.detector_factory import detector_factory
 
+
 class PrefetchDataset(torch.utils.data.Dataset):
   def __init__(self, opt, dataset, pre_process_func):
     self.images = dataset.images
@@ -26,8 +30,38 @@ class PrefetchDataset(torch.utils.data.Dataset):
     self.img_dir = dataset.img_dir
     self.pre_process_func = pre_process_func
     self.opt = opt
+
+  def _get_dota_item(self, index):
+    img_id = self.images[index]
+    img_info = self.load_image_func(ids=[img_id])[0]
+    file_name = img_info['file_name']
+
+    filename = osp.splitext(file_name)[0]
+    suffix = osp.splitext(file_name)[1]
+    crop_str = list(map(str, img_info['crop']))
+    crop_img_path = osp.join('/media/gfjiang/C/data/DOTA/crop',
+                             '_'.join([filename] + crop_str) + suffix)
+    if not osp.isfile(crop_img_path):
+      img_path = os.path.join('/media/gfjiang/C/data/DOTA/train/images', file_name)
+      image = cv2.imread(img_path)
+      sx, sy, ex, ey = img_info['crop']
+      image = image[sy:ey, sx:ex]
+      cv2.imwrite(crop_img_path, image)
+    else:
+      image = cv2.imread(crop_img_path)
+
+    images, meta = {}, {}
+    for scale in opt.test_scales:
+      if opt.task == 'ddd':
+        images[scale], meta[scale] = self.pre_process_func(
+          image, scale, img_info['calib'])
+      else:
+        images[scale], meta[scale] = self.pre_process_func(image, scale)
+    return img_id, {'images': images, 'image': image, 'meta': meta}
   
   def __getitem__(self, index):
+    if self.opt.dataset == 'dota':
+      return self._get_dota_item(index)
     img_id = self.images[index]
     img_info = self.load_image_func(ids=[img_id])[0]
     img_path = os.path.join(self.img_dir, img_info['file_name'])
@@ -43,6 +77,7 @@ class PrefetchDataset(torch.utils.data.Dataset):
 
   def __len__(self):
     return len(self.images)
+
 
 def prefetch_test(opt):
   os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
@@ -71,6 +106,11 @@ def prefetch_test(opt):
     results[img_id.numpy().astype(np.int32)[0]] = ret['results']
     Bar.suffix = '[{0}/{1}]|Tot: {total:} |ETA: {eta:} '.format(
                    ind, num_iters, total=bar.elapsed_td, eta=bar.eta_td)
+    img = pre_processed_images['image'].detach().cpu().numpy().squeeze()
+    print(type(ret['results']))
+    for cls_id, det_cls in ret['results'].items():
+      img = cvtools.draw_boxes_texts(img, det_cls[:, :-1], box_format="polygen")
+    cvtools.imwrite(img, opt.save_dir+'/debug/'+cvtools.get_time_str()+'.jpg')
     for t in avg_time_stats:
       avg_time_stats[t].update(ret[t])
       Bar.suffix = Bar.suffix + '|{} {tm.val:.3f}s ({tm.avg:.3f}s) '.format(
@@ -78,6 +118,7 @@ def prefetch_test(opt):
     bar.next()
   bar.finish()
   dataset.run_eval(results, opt.save_dir)
+
 
 def test(opt):
   os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
@@ -118,7 +159,9 @@ def test(opt):
   bar.finish()
   dataset.run_eval(results, opt.save_dir)
 
+
 if __name__ == '__main__':
+  # os.system("/opt/conda/bin/python /root/DOTA_devkit/dota_evaluation_task1.py")
   opt = opts().parse()
   if opt.not_prefetch_test:
     test(opt)

@@ -31,13 +31,16 @@ class CtdetDetector(BaseDetector):
       hm = output['hm'].sigmoid_()
       wh = output['wh']
       reg = output['reg'] if self.opt.reg_offset else None
+      a = None
+      if self.opt.dataset == 'dota':
+        a = output['a'].sigmoid_()
       if self.opt.flip_test:
         hm = (hm[0:1] + flip_tensor(hm[1:2])) / 2
         wh = (wh[0:1] + flip_tensor(wh[1:2])) / 2
         reg = reg[0:1] if reg is not None else None
       torch.cuda.synchronize()
       forward_time = time.time()
-      dets = ctdet_decode(hm, wh, reg=reg, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
+      dets = ctdet_decode(hm, wh, reg=reg, a=a, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
       
     if return_time:
       return output, dets, forward_time
@@ -50,9 +53,13 @@ class CtdetDetector(BaseDetector):
     dets = ctdet_post_process(
         dets.copy(), [meta['c']], [meta['s']],
         meta['out_height'], meta['out_width'], self.opt.num_classes)
+    if self.opt.dataset == 'dota':
+      coor_len = 8
+    else:
+      coor_len = 4
     for j in range(1, self.num_classes + 1):
-      dets[0][j] = np.array(dets[0][j], dtype=np.float32).reshape(-1, 5)
-      dets[0][j][:, :4] /= scale
+      dets[0][j] = np.array(dets[0][j], dtype=np.float32).reshape(-1, coor_len+1)
+      dets[0][j][:, :coor_len] /= scale
     return dets[0]
 
   def merge_outputs(self, detections):
@@ -63,12 +70,12 @@ class CtdetDetector(BaseDetector):
       if len(self.scales) > 1 or self.opt.nms:
          soft_nms(results[j], Nt=0.5, method=2)
     scores = np.hstack(
-      [results[j][:, 4] for j in range(1, self.num_classes + 1)])
+      [results[j][:, -1] for j in range(1, self.num_classes + 1)])
     if len(scores) > self.max_per_image:
       kth = len(scores) - self.max_per_image
       thresh = np.partition(scores, kth)[kth]
       for j in range(1, self.num_classes + 1):
-        keep_inds = (results[j][:, 4] >= thresh)
+        keep_inds = (results[j][:, -1] >= thresh)
         results[j] = results[j][keep_inds]
     return results
 

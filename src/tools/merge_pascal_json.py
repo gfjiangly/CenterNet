@@ -1,7 +1,7 @@
 import json
 
 # ANNOT_PATH = '/home/zxy/Datasets/VOC/annotations/'
-ANNOT_PATH = 'voc/annotations/'
+ANNOT_PATH = '/media/gfjiang/E/data/voc/annotations/'
 OUT_PATH = ANNOT_PATH
 INPUT_FILES = ['pascal_train2012.json', 'pascal_val2012.json',
                'pascal_train2007.json', 'pascal_val2007.json']

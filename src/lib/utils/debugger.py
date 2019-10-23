@@ -62,6 +62,9 @@ class Debugger(object):
       self.focal_length = 721.5377
       self.W = 1242
       self.H = 375
+    elif dataset == 'dota':
+        self.names = dota_class_name
+
     num_classes = len(self.names)
     self.down_ratio=down_ratio
     # for bird view
@@ -454,6 +457,12 @@ coco_class_name = [
      'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
      'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
      'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+]
+
+dota_class_name = [
+    'large-vehicle', 'swimming-pool', 'helicopter', 'bridge', 'plane', 'ship',
+    'soccer-ball-field', 'basketball-court', 'ground-track-field', 'small-vehicle',
+    'harbor', 'baseball-diamond', 'tennis-court', 'roundabout', 'storage-tank'
 ]
 
 color_list = np.array(
