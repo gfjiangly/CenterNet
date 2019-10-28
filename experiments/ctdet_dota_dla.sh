@@ -1,6 +1,6 @@
 cd src
 # train
-python main.py ctdet --exp_id dota_dla --dataset dota --batch_size 16 --lr 1e-3 --num_workers 0 --val_intervals 200
+python main.py ctdet --exp_id dota_dla --dataset dota --batch_size 16 --lr 5e-4 --val_intervals 100
 # test
 python test.py ctdet --exp_id dota_dla --dataset dota --keep_res --resume
 # flip test

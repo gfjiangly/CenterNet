@@ -8,8 +8,8 @@ import cv2
 import os
 import os.path as osp
 import cvtools
-import matplotlib.pyplot as plt
-import seaborn as sns
+#import matplotlib.pyplot as plt
+#import seaborn as sns
 
 from utils.image import flip, color_aug
 from utils.image import get_affine_transform, affine_transform
@@ -28,6 +28,16 @@ def draw_heatmap(data, to_file):
                 yticklabels=10,
                 ax=ax)
     fig.savefig(to_file)
+
+
+def convert_angle(a, w, h):
+    if 0. > a >= -90.:
+        if w < h:
+            a = 90. + a
+            w, h = h, w
+    else:
+        a = 0.
+    return a, w, h
 
 
 class CTDetDataset(data.Dataset):
@@ -50,10 +60,10 @@ class CTDetDataset(data.Dataset):
         filename = osp.splitext(file_name)[0]
         suffix = osp.splitext(file_name)[1]
         crop_str = list(map(str, img_info['crop']))
-        crop_img_path = osp.join('/media/gfjiang/C/data/DOTA/crop',
+        crop_img_path = osp.join('/media/jiang/datasets/DOTA/crop',
                                  '_'.join([filename] + crop_str) + suffix)
         if not osp.isfile(crop_img_path):
-            img_path = os.path.join('/media/gfjiang/C/data/DOTA/train/images', file_name)
+            img_path = os.path.join('/media/jiang/datasets/DOTA/train/images', file_name)
             img = cv2.imread(img_path)
             sx, sy, ex, ey = img_info['crop']
             img = img[sy:ey, sx:ex]
@@ -139,10 +149,7 @@ class CTDetDataset(data.Dataset):
                 segm[i + 1] = np.clip(segm[i + 1], 0, output_h - 1)
 
             segm_hull = cv2.convexHull(segm.reshape(-1, 2).astype(np.float32), clockwise=False)
-            xywha = cv2.minAreaRect(segm_hull)
-            xy = xywha[0]
-            w, h = xywha[1]
-            a = xywha[2]
+            xy, (w, h), a = cv2.minAreaRect(segm_hull)
             if h > 0 and w > 0:
                 if 0. > a >= -90.:
                     if w < h:

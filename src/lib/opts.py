@@ -85,9 +85,9 @@ class opts(object):
         # train
         self.parser.add_argument('--lr', type=float, default=1e-3,
                                  help='learning rate for batch size 32.')
-        self.parser.add_argument('--lr_step', type=str, default='20,40',
+        self.parser.add_argument('--lr_step', type=str, default='30,50',
                                  help='drop learning rate by 10.')
-        self.parser.add_argument('--num_epochs', type=int, default=50,
+        self.parser.add_argument('--num_epochs', type=int, default=60,
                                  help='total training epochs.')
         self.parser.add_argument('--batch_size', type=int, default=32,
                                  help='batch size')
@@ -275,7 +275,7 @@ class opts(object):
 
         opt.root_dir = os.path.join(os.path.dirname(__file__), '..', '..')
         # opt.data_dir = os.path.join(opt.root_dir, 'data')
-        opt.data_dir = os.path.join('/media/gfjiang/C/data')
+        opt.data_dir = os.path.join('/media/jiang/datasets')
         opt.exp_dir = os.path.join(opt.root_dir, 'exp', opt.task)
         opt.save_dir = os.path.join(opt.exp_dir, opt.exp_id)
         opt.debug_dir = os.path.join(opt.save_dir, 'debug')

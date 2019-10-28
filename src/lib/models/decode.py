@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import cvtools
+import cv2
 
 from .utils import _gather_feat, _tranpose_and_gather_feat
 
@@ -499,6 +500,8 @@ def ctdet_decode(heat, wh, reg=None, a=None, cat_spec_wh=False, K=100):
         wh = wh.view(batch, K, 2)
     if a is not None:
         a = _tranpose_and_gather_feat(a, inds)
+        new_wh = torch.where(a > 0, wh[..., [1, 0]], wh[..., [0, 1]])
+        new_a = torch.where(a > 0., a - 1., a)
     clses = clses.view(batch, K, 1).float()
     scores = scores.view(batch, K, 1)
     bboxes = torch.cat([xs - wh[..., 0:1] / 2,
@@ -508,11 +511,17 @@ def ctdet_decode(heat, wh, reg=None, a=None, cat_spec_wh=False, K=100):
     if a is not None:
         center = torch.cat([xs, ys], dim=2).detach().cpu().numpy().squeeze()
         bboxes = bboxes.detach().cpu().numpy().squeeze()
-        a = a.cpu().numpy().squeeze() * (-90.)
+        a = a.detach().cpu().numpy().squeeze() * 90.
         new_bboxes = []
         for i in range(len(bboxes)):
             new_bboxes.append(cvtools.rotate_rect(bboxes[i], center[i], a[i]))
         bboxes = torch.from_numpy(np.array(new_bboxes)).float().cuda().unsqueeze(0)
+        # center_np = torch.cat([xs, ys], dim=2).detach().cpu().numpy().squeeze()
+        # wh_np = wh.detach().cpu().numpy().squeeze()
+        # a_np = a.detach().cpu().numpy().squeeze() * 90.
+        # for i in range(len(center_np)):
+        #     new_bboxes.append(cv2.boxPoints((center_np[i], wh_np[i], a_np[i])).reshape(-1))
+        # bboxes = torch.from_numpy(np.array(new_bboxes)).float().cuda().unsqueeze(0)
 
     detections = torch.cat([bboxes, scores, clses], dim=2)
     return detections
